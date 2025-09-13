@@ -73,10 +73,10 @@ def format_upl(upl_str, upl_ratio_str):
     except:
         return f"{upl_str} ({upl_ratio_str}%)"
 
-def format_number(val):
+def format_number(val, decimals=4):
     try:
         num = float(val)
-        return f"{round(num, 4):.4f}"
+        return f"{round(num, decimals):.{decimals}f}"
     except:
         return str(val)
 
@@ -102,7 +102,7 @@ async def update_table():
             for p in positions:
                 if p['instType'] != 'SWAP':
                     continue
-                size = f"{p.get('notionalUsd', p['pos'])} USD" if p.get('notionalUsd') else f"{p['pos']} {p.get('ccy', '')}"
+                size = f"{format_number(p.get('notionalUsd', p['pos']), 2)} USD" if p.get('notionalUsd') else f"{p['pos']} {p.get('ccy', '')}"
                 upl_value = float(p['upl']) if p['upl'] else 0
                 formatted_upl = format_upl(p['upl'], p['uplRatio'])
                 row = {
