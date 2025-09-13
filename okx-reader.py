@@ -68,7 +68,7 @@ def format_upl(upl_str, upl_ratio_str):
     try:
         upl_val = float(upl_str)
         formatted_upl = f"{round(upl_val, 4):.4f}"
-        formatted_ratio = f"{float(upl_ratio_str):.4f}"
+        formatted_ratio = f"{float(upl_ratio_str)*100:.4f}"
         return f"{formatted_upl} ({formatted_ratio}%)"
     except:
         return f"{upl_str} ({upl_ratio_str}%)"
