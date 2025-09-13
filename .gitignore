@@ -1,0 +1,7 @@
+.venv/
+.env
+okx_reader.egg-info/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
