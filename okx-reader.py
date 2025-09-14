@@ -24,7 +24,8 @@ columns = [
 ]
 
 # UI elements
-ui.label('OKX Positions Viewer')
+ui.label('OKX Positions Viewer').classes('text-2xl font-bold')
+total_eq_label = ui.label('Estimated Total Value: Loading... USD').classes('text-xl font-semibold')
 refresh_sec = ui.number('Refresh every (seconds)', value=120, min=1)
 start_button = ui.button('Update Refresh Rate')
 table = ui.table(columns=columns, rows=[], row_key='instId').style('width: 100%; font-weight: bold;')
@@ -43,7 +44,13 @@ chart = ui.echart({
 
 log_text = ui.textarea('Debug Logs').props('readonly').style('width: 100%; height: 200px;')
 
+def generate_signature(timestamp, method, request_path, secret, body=''):
+    """Generate OKX API signature."""
+    prehash = timestamp + method + request_path + body
+    return base64.b64encode(hmac.new(secret.encode('utf-8'), prehash.encode('utf-8'), hashlib.sha256).digest()).decode('utf-8')
+
 def fetch_positions(api_key, secret, passphrase):
+    """Fetch positions from OKX API."""
     base_url = 'https://www.okx.com'
     request_path = '/api/v5/account/positions'
     params = {'instType': 'SWAP'}
@@ -52,8 +59,7 @@ def fetch_positions(api_key, secret, passphrase):
     timestamp = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
     method = 'GET'
     body = ''
-    prehash = timestamp + method + full_path + body
-    sign = base64.b64encode(hmac.new(secret.encode('utf-8'), prehash.encode('utf-8'), hashlib.sha256).digest()).decode('utf-8')
+    sign = generate_signature(timestamp, method, full_path, secret, body)
     headers = {
         'OK-ACCESS-KEY': api_key,
         'OK-ACCESS-SIGN': sign,
@@ -62,6 +68,24 @@ def fetch_positions(api_key, secret, passphrase):
         'Content-Type': 'application/json'
     }
     resp = requests.get(base_url + full_path, headers=headers)
+    return resp.json()
+
+def fetch_total_equity(api_key, secret, passphrase):
+    """Fetch total equity from OKX API."""
+    base_url = 'https://www.okx.com'
+    request_path = '/api/v5/account/balance'
+    timestamp = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
+    method = 'GET'
+    body = ''
+    sign = generate_signature(timestamp, method, request_path, secret, body)
+    headers = {
+        'OK-ACCESS-KEY': api_key,
+        'OK-ACCESS-SIGN': sign,
+        'OK-ACCESS-TIMESTAMP': timestamp,
+        'OK-ACCESS-PASSPHRASE': passphrase,
+        'Content-Type': 'application/json'
+    }
+    resp = requests.get(base_url + request_path, headers=headers)
     return resp.json()
 
 def format_upl(upl_str, upl_ratio_str):
@@ -91,9 +115,28 @@ async def update_table():
         ui.notify('Please set OKX_API_KEY, OKX_SECRET, and OKX_PASSPHRASE environment variables.')
         return
     try:
+        # Fetch positions
         data = fetch_positions(ak, sk, pp)
         log_text.value += f"[{datetime.now().strftime('%H:%M:%S')}] Fetching positions...\n"
         log_text.update()
+        # Fetch total equity
+        equity_data = fetch_total_equity(ak, sk, pp)
+        log_text.value += f"[{datetime.now().strftime('%H:%M:%S')}] Fetching total equity...\n"
+        log_text.update()
+        
+        # Update total equity label
+        if equity_data['code'] == '0' and equity_data['data']:
+            total_eq = format_number(equity_data['data'][0]['totalEq'], 2)
+            total_eq_label.text = f"Estimated Total Value: {total_eq} USD"
+            total_eq_label.update()
+            log_text.value += f"[{datetime.now().strftime('%H:%M:%S')}] Total equity updated: {total_eq} USD\n"
+        else:
+            total_eq_label.text = "Estimated Total Value: Error fetching data"
+            total_eq_label.update()
+            log_text.value += f"[{datetime.now().strftime('%H:%M:%S')}] Error fetching equity: {equity_data['msg']}\n"
+        log_text.update()
+
+        # Update positions table
         if data['code'] == '0':
             positions = data['data']
             rows = []
