@@ -6,6 +6,7 @@ import base64
 from datetime import datetime, timezone
 import asyncio
 import os
+import json
 
 # Define the columns for the table based on the screenshot and API fields
 columns = [
@@ -16,6 +17,7 @@ columns = [
     {'name': 'liqPx', 'label': 'Est Liq Price', 'field': 'liqPx', 'sortable': True},
     {'name': 'bePx', 'label': 'Breakeven Price', 'field': 'bePx', 'sortable': True},
     {'name': 'upl', 'label': 'Floating PnL', 'field': 'upl', 'sortable': True},
+    {'name': 'slTriggerPx', 'label': 'SL Trigger Price', 'field': 'slTriggerPx', 'sortable': True},
     {'name': 'mgnRatio', 'label': 'Maintenance Margin Ratio', 'field': 'mgnRatio', 'sortable': True},
     {'name': 'margin', 'label': 'Margin', 'field': 'margin', 'sortable': True},
     {'name': 'lever', 'label': 'Leverage', 'field': 'lever', 'sortable': True},
@@ -68,6 +70,9 @@ def fetch_positions(api_key, secret, passphrase):
         'Content-Type': 'application/json'
     }
     resp = requests.get(base_url + full_path, headers=headers)
+    # log_text.value += f"{resp.text}\n"
+    # log_text.update()
+    # print(json.dumps(resp.json(), indent=2))
     return resp.json()
 
 def fetch_total_equity(api_key, secret, passphrase):
@@ -156,6 +161,7 @@ async def update_table():
                     'liqPx': format_number(p['liqPx']),
                     'bePx': format_number(p.get('bePx', '')),
                     'upl': formatted_upl,
+                    'slTriggerPx': format_number(p['closeOrderAlgo'][0]['slTriggerPx']),
                     'mgnRatio': format_number(p['mgnRatio']),
                     'margin': format_number(p['margin']),
                     'lever': format_number(p['lever']),
