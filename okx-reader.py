@@ -175,7 +175,8 @@ async def update_table():
         else:
             log_text.value += f"[{datetime.now().strftime('%H:%M:%S')}] Error: {data['msg']}\n"
             log_text.update()
-            ui.notify(f"Error: {data['msg']}")
+            with log_text:
+                ui.notify(f"Error: {data['msg']}")
     except Exception as e:
         log_text.value += f"[{datetime.now().strftime('%H:%M:%S')}] Exception: {str(e)}\n"
         log_text.update()
